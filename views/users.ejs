@@ -1,0 +1,26 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Поиск продуктов</title>
+    <link rel='stylesheet' href='../static/css/style.css'>
+</head>
+<body>
+<% include blocks/header.ejs %>
+<div class="block">
+    <table>
+        <thead>
+        <tr><th>ID</th><th>Логин</th><th>Пароль</th>
+        </thead>
+        <tbody>
+        <% users.forEach(function(user) { %>
+            <tr>
+                <td align="center"><%= user._id %></td>
+                <td align="center"><%= user.login %></td>
+                <td align="center"><%= user.password %></td>
+            </tr>
+        <% }); %>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>
