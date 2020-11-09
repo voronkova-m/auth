@@ -5,6 +5,10 @@ const passport = require('passport');
 let User = require('../models/userSchema').User;
 const keys = require('../libs/jsonwebtoken');
 
+let auth = passport.authenticate('jwt', {
+    session: false
+});
+
 module.exports = function (app) {
     app.get('/', function (req, res) {
         res.render('index');
@@ -28,19 +32,47 @@ module.exports = function (app) {
     })
 
     app.get('/users', passport.authenticate('jwt', {session: false}), function (req, res) {
-    //app.get('/users', passport.authenticate('jwt', {session: false}), function (req, res) {
+    //app.get('/users', function (req, res) {
+        /*if(req.headers.authorization)
+        {
+            jwt.verify(req.headers.authorization.split(' ')[1], keys.jwt, function (err, payload) {
+                if (err){
+                    res.render('error', {message: err.message});
+                    return;
+                }
+                User.find({}, function (err, users) {
+                    if (err){
+                        res.render('error', {message: err.message});
+                        return;
+                    }
+                    //res.render('users', {users: users});  // для отладки
+                    res.send(users);  // для отладки
+                });
+            })
+        }*/
         User.find({}, function (err, users) {
             if (err){
                 res.render('error', {message: err.message});
                 return;
             }
-            res.render('users', {users: users});  // для отладки
-            //res.send(req.user.login);  // для отладки
+            //res.render('users', {users: users});  // для отладки
+            res.send(users);  // для отладки
+        });
+    });
+
+    app.get('/user/:id', passport.authenticate('jwt', {session: false}), function (req, res) {
+        //app.get('/user/:id', auth, function (req, res) {
+        User.findById(req.params.id, function (err, user) {
+            if (user == undefined) {
+                res.render('error', {message: "Пользователя с таким id нет"});
+            } else {
+                res.json(user);
+            }
         });
     });
 
     app.get('/register', function (req, res) {
-        res.render('register');
+        res.render('register', {message: ''});
     });
 
     app.post('/register', async function (req, res) {
@@ -49,16 +81,14 @@ module.exports = function (app) {
 
         if (candidate){
             // если такой пользователь есть
-            res.status(409).json({
-               message: 'Такой login уже занят. Попробуйте другой'
-            });
+            res.render('register', {message: 'Такой login уже занят. Попробуйте другой'});
         } else {
             let password = req.body.password;
             let salt = bcrypt.genSaltSync(10);
             let newUser = new User({login: login, password: bcrypt.hashSync(password, salt)});
             try{
                 await newUser.save();
-                res.redirect("http://127.0.0.1:5000/users")
+                res.render('login', {message: 'Регистрация прошла успешно. Теперь можете войти в систему, используя свои данные.'})
             } catch(err){
                 // обработка ошибки
                 res.render('error', {message: err.message});
@@ -67,7 +97,7 @@ module.exports = function (app) {
     });
 
     app.get('/login', function (req, res) {
-        res.render('login');
+        res.render('login', {message: ''});
     });
 
     app.post('/login', async function (req, res) {
@@ -84,21 +114,25 @@ module.exports = function (app) {
                     login: user.login,
                     userId: user._id
                 }, keys.jwt, {expiresIn: 60 * 60}); // время жизни токена = 1 час
+
                 res.status (200).json({
+                    message: 'Login success',
                     token: `Bearer ${token}`
                 })
             } else {
-                res.status(401).json({
+                res.render('login', {message: 'Неправильная пара login/password. Попробуйте еще раз.'});
+                /*res.status(401).json({
                     message: 'Пароль не верный.'
                     //message: 'Неправильная пара login/password'
-                });
+                });*/
             }
         } else {
             // пользователя нет, ошибка
-            res.status(404).json({
+            res.render('login', {message: 'Неправильная пара login/password. Попробуйте еще раз.'});
+            /*res.status(404).json({
                 message: 'Пользователь с таким login не найден.'
                 //message: 'Неправильная пара login/password'
-            });
+            });*/
         }
     });
 };
